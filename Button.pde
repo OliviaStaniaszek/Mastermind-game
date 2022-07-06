@@ -24,7 +24,6 @@ class Button{
   
   void drawButton(int currentPage){
     rectMode(CENTER);
-    //println(page, currentPage);
     if(page == currentPage){
       if(hover ==true){
         fill(colour,100);
