@@ -1,6 +1,6 @@
 int currentPage;
 int noOfGuesses = 5;
-int[][] guessesAr = new int[4][noOfGuesses];
+int[][] guessesAr;
 int[][] feedbackAr = new int[4][noOfGuesses];
 int noOfButtons = 4;
 Button[] buttons = new Button[noOfButtons];
@@ -10,8 +10,8 @@ Boolean codeGenerated;
 int[] guess = new int[4];
 Boolean won;
 Boolean mouseClicked = false;
-int startTime;
-int endTime;
+float startTime;
+float endTime;
 
 int input;
 Boolean playing;
@@ -21,27 +21,39 @@ int guessIndiv;
 PFont tFont; //title
 PFont bFont; //body
 
-PrintWriter scoreboard;
-BufferedReader reader;
-String line;
+IntList scoreGuess;
+StringList scoreDate;
+FloatList scoreTime;
+Table table;
+Boolean dataSaved;
 
 void setup(){
   size(550,700);
   tFont = createFont("Agency FB", 90);
   bFont = createFont("OCR A Extended", 20);
-  scoreboard = createWriter("scoreboard.txt.");
-  reader = createReader("scoreboard.txt");
-  parseFile();
+
+  scoreGuess = new IntList();
+  scoreDate = new StringList();
+  scoreTime = new FloatList();
+  
+  table = loadTable("scoreboard.csv","header");
+  //table = new Table();
+  //table.addColumn("guesses");
+  //table.addColumn("date");
+  //table.addColumn("timetaken");
+  dataSaved = false;
+
+  guessesAr = new int[4][noOfGuesses];
   
   currentPage = 0; //menu
   codeGenerated = false;
   won = false;
   playing = false;
   
-  buttons[0] = new Button("New Game", width/2, height*0.35, 300, 70, pin1, 0, false,1);
-  buttons[1] = new Button("Scores", width/2, height*0.45, 300, 70, pin2, 0, false,2);
-  buttons[2] = new Button("How to Play", width/2, height*0.55, 300, 70, pin3, 0, false,3);
-  buttons[3] = new Button("Options", width/2, height*0.65, 300, 70, pin4, 0, false,4);
+  buttons[0] = new Button("New Game", width/2, height*0.35, 300, 60, pin1, 0, false,1);
+  buttons[1] = new Button("Scores", width/2, height*0.45, 300, 60, pin2, 0, false,2);
+  buttons[2] = new Button("How to Play", width/2, height*0.55, 300, 60, pin3, 0, false,3);
+  buttons[3] = new Button("Options", width/2, height*0.65, 300, 60, pin4, 0, false,4);
 
   colourSelect[0] = new Button("1", 475, height*0.16-45, 90,90, pin1, 1, false, 1);
   colourSelect[1] = new Button("2", 475, height*(0.16*2)-45, 90,90, pin2, 1, false, 2);
@@ -51,14 +63,7 @@ void setup(){
   colourSelect[5] = new Button("6", 475, height*(0.16*6)-45, 90,90, pin6, 1, false, 6);
   
   //fill 2d array with 0s
-  for(int i=0; i<4; i++){
-    for(int j=0; j<noOfGuesses; j++){
-      guessesAr[i][j] = 0;
-      feedbackAr[i][j] = 0;
-      //println(i,j,guessesAr[i][j]);
-      
-    }
-  }
+  
   
   
 }//end of setup
@@ -71,24 +76,11 @@ void draw(){
     game();
   } else if(currentPage ==2){
     scoreboard();
+  } else if(currentPage ==3){
+    howToPlay();
   }
   for(int i=0; i<noOfButtons; i++){
     buttons[i].collision();
-  }
-}
-
-String[] parseFile(){
-  line = null;
-  try{
-    while((line = reader.readLine()) != null){
-      String[] pieces = split(line, TAB);
-      int guesses = int(pieces[0]);
-      String date = (pieces[1]);
-      float time = float(pieces[2]);
-    }
-    reader.close();
-  } catch(IOException e){
-    e.printStackTrace();
   }
 }
 
@@ -140,6 +132,7 @@ void generatePattern(){
   }
   println(codePattern);
   codeGenerated = true;
+  dataSaved = false;
 }
 
 void game(){
@@ -149,10 +142,15 @@ void game(){
     guessIndiv = 0;
     guessNo = 0;
     startTime = millis();
+    for(int i=0; i<4; i++){
+      for(int j=0; j<noOfGuesses; j++){
+        guessesAr[i][j] = 0;
+        feedbackAr[i][j] = 0;
+        //println(i,j,guessesAr[i][j]);
+      }
+    }
     
   }
-  
- 
   background(bkg);
   
   if(playing){
@@ -163,21 +161,20 @@ void game(){
     }
   }else{ //game over
     if(won){
+      //float endTime2 = millis();
       textFont(tFont);
       text("You Won!", width/2, height/2 -50);
       textFont(bFont);
       //String message = "You guessed the correct pattern in" +guessNo+ "guesses";
       text("You guessed the correct", width/2, height/2 +30);
-      text(" pattern in " +guessNo+ " guesses", width/2, height/2 +60);
+      text("pattern in " +guessNo+ " guesses", width/2, height/2 +60);
+      //text("and "+str(endTime2-startTime) +" seconds", width/2, height/2 +60);
+
       
-      int d = day();
-      int m = month();
-      int y = year();
-      endTime = millis();
-      float timeElapsed = (endTime-startTime)/1000;
-      scoreboard.println(guessNo+"\t"+String.valueOf(d)+"/"+String.valueOf(m)+"/"+String.valueOf(y)+"\t"+timeElapsed);
-      scoreboard.flush();
-      scoreboard.close();
+      if(!dataSaved){
+        saveData();
+      }
+      
   }else{
       textFont(tFont);
       text("game over", width/2, height/2 -50);
@@ -188,12 +185,33 @@ void game(){
     }
     if(keyPressed){
       if (key == ENTER || key == RETURN) {
-        println("TEST - enter");
+        //println("TEST - enter");
+        codeGenerated = false;
         currentPage = 0;
         menuPage();
       } 
     }
   }
+}
+
+void saveData(){
+  int d = day();
+  int m = month();
+  int y = year();
+  String day = String.valueOf(d);
+  String month = String.valueOf(m);
+  String year = String.valueOf(y);
+  String yearShort = year.substring(2);
+  
+  endTime = millis();
+  float timeElapsed = (endTime-startTime)/1000;
+  
+  TableRow newRow = table.addRow();
+  newRow.setInt("guesses", guessNo);
+  newRow.setString("date",(day+"/"+month+"/"+yearShort));
+  newRow.setFloat("timetaken", timeElapsed);
+  saveTable(table, "data/scoreboard.csv");
+  dataSaved = true;
 }
   
 void feedback(){
@@ -206,9 +224,9 @@ void feedback(){
     } else{
       //println("not correct");
       for(int n=0; n<4; n++){
-        println("test",n);
+        //println("test",n);
         if(codePattern[n] == currentPin){
-          println(codePattern[n]);
+          //println(codePattern[n]);
           feedbackAr[i][guessNo] = 1;
         }
       }
@@ -245,9 +263,66 @@ void scoreboard(){
   background(bkg);
   textFont(tFont);
   textSize(60);
-  fill(255);
+  fill(pin2);
   text("Scoreboard", width/2, height*0.10);
-  String[] scores = new int[]parseFile();
+  textSize(20);
+  fill(255);
+  text("press enter to return to menu", 110, 20);
+  textSize(35);
+  text("# of guesses",width*0.25,height*0.2);
+  text("Date",width/2,height*0.2);
+  text("Time taken",width*0.75,height*0.2);
+  float top = height*0.25;
+  float gap = 25;
+  
+  table = loadTable("scoreboard.csv","header");
+  //println("TEST "+table.getRowCount()+" total rows in table");
+  int i=0;
+  textFont(bFont);
+  textSize(25);
+  table.sort(2);
+  for(TableRow row: table.rows()){
+  //for(int i=0; i<table.getRowCount();i++){
+    int guess = row.getInt("guesses");
+    String date = row.getString("date");
+    float time = row.getFloat("timetaken");
+    text(str(guess),width*0.25,top+gap*i);
+    text(date,width/2,top+gap*i);
+    text(str(time),width*0.75,top+gap*i);
+
+   // println(guess, date, time);
+    i++;
+  }
+  
+  if(keyPressed){
+    if (key == ENTER || key == RETURN) {
+      //println("TEST - enter");
+      currentPage = 0;
+      menuPage();
+    } 
+  }
+}
+
+void howToPlay(){
+  background(bkg);
+  textFont(tFont);
+  textSize(60);
+  fill(pin3);
+  text("How to play", width/2, height*0.10);
+  textSize(20);
+  fill(255);
+  text("press enter to return to menu", 110, 20);
+  textSize(30);
+  text("# of guesses",width*0.25,height*0.2);
+  
+  
+  if(keyPressed){
+    if (key == ENTER || key == RETURN) {
+      //println("TEST - enter");
+      currentPage = 0;
+      menuPage();
+    } 
+  }
 }
 
 void drawGuesses(){

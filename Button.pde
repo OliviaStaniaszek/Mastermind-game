@@ -51,11 +51,13 @@ class Button{
   }
   
   void collision(){
-    if(mouseY<y+h/2 && mouseY>y-h/2 && mouseX<x+w/2 && mouseX>x-w/2){
-        hover = true;
-      }else{
-        hover = false;
+    if(currentPage == page){
+      if(mouseY<y+h/2 && mouseY>y-h/2 && mouseX<x+w/2 && mouseX>x-w/2){
+          hover = true;
+        }else{
+          hover = false;
+       }
      }
-   }
+    }
   
 }
