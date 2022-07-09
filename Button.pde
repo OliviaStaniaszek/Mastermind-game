@@ -1,7 +1,7 @@
 class Button{
   String text;
   int x;
-  int y;
+  float y;
   int w;
   int h;
   color colour;
@@ -10,7 +10,7 @@ class Button{
   int gotoPage;
   
   //constructor
-  Button(String txt, int xpos, int ypos, int bwidth, int bheight, color col, int pg, Boolean hov, int destination){
+  Button(String txt, int xpos, float ypos, int bwidth, int bheight, color col, int pg, Boolean hov, int destination){
     text = txt;
     x = xpos;
     y = ypos;
@@ -31,9 +31,10 @@ class Button{
         fill(colour);  
       }
       rect(x,y,w,h, 10);
+      textFont(bFont);
       textAlign(CENTER, CENTER);
       fill(0);
-      textSize(20); //?
+      textSize(35); 
       text(text, x,y);
     }
   }
