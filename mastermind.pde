@@ -1,5 +1,5 @@
 int currentPage;
-int noOfGuesses = 12;
+int noOfGuesses = 5;
 int[][] guessesAr = new int[4][noOfGuesses];
 int[][] feedbackAr = new int[4][noOfGuesses];
 int noOfButtons = 4;
@@ -10,6 +10,8 @@ Boolean codeGenerated;
 int[] guess = new int[4];
 Boolean won;
 Boolean mouseClicked = false;
+int startTime;
+int endTime;
 
 int input;
 Boolean playing;
@@ -19,13 +21,19 @@ int guessIndiv;
 PFont tFont; //title
 PFont bFont; //body
 
+PrintWriter scoreboard;
+BufferedReader reader;
+String line;
+
 void setup(){
-  size(550,1000);
+  size(550,700);
   tFont = createFont("Agency FB", 90);
   bFont = createFont("OCR A Extended", 20);
+  scoreboard = createWriter("scoreboard.txt.");
+  reader = createReader("scoreboard.txt");
+  parseFile();
   
   currentPage = 0; //menu
-  noOfGuesses = 12;
   codeGenerated = false;
   won = false;
   playing = false;
@@ -35,13 +43,12 @@ void setup(){
   buttons[2] = new Button("How to Play", width/2, height*0.55, 300, 70, pin3, 0, false,3);
   buttons[3] = new Button("Options", width/2, height*0.65, 300, 70, pin4, 0, false,4);
 
-
-  colourSelect[0] = new Button("1", 475, 250, 90,90, pin1, 1, false, 1);
-  colourSelect[1] = new Button("2", 475, 350, 90,90, pin2, 1, false, 2);
-  colourSelect[2] = new Button("3", 475, 450, 90,90, pin3, 1, false, 3);
-  colourSelect[3] = new Button("4", 475, 550, 90,90, pin4, 1, false, 4);
-  colourSelect[4] = new Button("5", 475, 650, 90,90, pin5, 1, false, 5);
-  colourSelect[5] = new Button("6", 475, 750, 90,90, pin6, 1, false, 6);
+  colourSelect[0] = new Button("1", 475, height*0.16-45, 90,90, pin1, 1, false, 1);
+  colourSelect[1] = new Button("2", 475, height*(0.16*2)-45, 90,90, pin2, 1, false, 2);
+  colourSelect[2] = new Button("3", 475, height*(0.16*3)-45, 90,90, pin3, 1, false, 3);
+  colourSelect[3] = new Button("4", 475, height*(0.16*4)-45, 90,90, pin4, 1, false, 4);
+  colourSelect[4] = new Button("5", 475, height*(0.16*5)-45, 90,90, pin5, 1, false, 5);
+  colourSelect[5] = new Button("6", 475, height*(0.16*6)-45, 90,90, pin6, 1, false, 6);
   
   //fill 2d array with 0s
   for(int i=0; i<4; i++){
@@ -61,16 +68,28 @@ void draw(){
   if (currentPage == 0){
     menuPage();
   } else if(currentPage ==1){
-
     game();
+  } else if(currentPage ==2){
+    scoreboard();
   }
   for(int i=0; i<noOfButtons; i++){
     buttons[i].collision();
   }
-  //for(int i=0; i<6; i++){
-  //  colourSelect[i].collision();
-  //  //println(colourSelect[i].hover);
-  //}
+}
+
+String[] parseFile(){
+  line = null;
+  try{
+    while((line = reader.readLine()) != null){
+      String[] pieces = split(line, TAB);
+      int guesses = int(pieces[0]);
+      String date = (pieces[1]);
+      float time = float(pieces[2]);
+    }
+    reader.close();
+  } catch(IOException e){
+    e.printStackTrace();
+  }
 }
 
 void mousePressed(){
@@ -79,9 +98,7 @@ void mousePressed(){
       currentPage = buttons[i].gotoPage;
     }
   }
-
 }
-
 
 void keyPressed() {
   if (key >= '1' && key <= '6') {
@@ -105,7 +122,7 @@ void keyPressed() {
       feedback();
       guessIndiv = 0;
       guessNo ++;
-      if(guessNo > 11){
+      if(guessNo > noOfGuesses-1){
         playing = false;
       }
     } else{
@@ -113,9 +130,9 @@ void keyPressed() {
     }
     
     //println("TEST", guessNo, guessIndiv);
-    }
+  }
+          
 }
-
 
 void generatePattern(){
   for(int i=0; i<4;i++){
@@ -131,6 +148,8 @@ void game(){
     playing = true;
     guessIndiv = 0;
     guessNo = 0;
+    startTime = millis();
+    
   }
   
  
@@ -150,7 +169,16 @@ void game(){
       //String message = "You guessed the correct pattern in" +guessNo+ "guesses";
       text("You guessed the correct", width/2, height/2 +30);
       text(" pattern in " +guessNo+ " guesses", width/2, height/2 +60);
-    }else{
+      
+      int d = day();
+      int m = month();
+      int y = year();
+      endTime = millis();
+      float timeElapsed = (endTime-startTime)/1000;
+      scoreboard.println(guessNo+"\t"+String.valueOf(d)+"/"+String.valueOf(m)+"/"+String.valueOf(y)+"\t"+timeElapsed);
+      scoreboard.flush();
+      scoreboard.close();
+  }else{
       textFont(tFont);
       text("game over", width/2, height/2 -50);
       textFont(bFont);
@@ -159,14 +187,12 @@ void game(){
       
     }
     if(keyPressed){
-        if (key == CODED) {
-          if (keyCode == ENTER) {
-            println("TEST - enter");
-            currentPage = 0;
-            menuPage();
-          }
-        }
-      }
+      if (key == ENTER || key == RETURN) {
+        println("TEST - enter");
+        currentPage = 0;
+        menuPage();
+      } 
+    }
   }
 }
   
@@ -178,14 +204,13 @@ void feedback(){
       //println("TEST - correct colour and pos");
       feedbackAr[i][guessNo] = 2; //correct
     } else{
-      Boolean contains = false;
-      for(int n=0; n<3; n++){
-        if(codePattern[i] == currentPin){
-          contains = true;
+      //println("not correct");
+      for(int n=0; n<4; n++){
+        println("test",n);
+        if(codePattern[n] == currentPin){
+          println(codePattern[n]);
+          feedbackAr[i][guessNo] = 1;
         }
-      if(contains){
-        feedbackAr[i][guessNo] = 1; //partially correct
-      }
       }
     }
   }
@@ -204,7 +229,7 @@ void menuPage(){
   background(bkg);
   textFont(tFont);
   fill(255);
-  text("Mastermind", width/2, height*0.25);
+  text("Mastermind", width/2, height*0.22);
   textFont(bFont);
   textSize(20);
   text("(c) Olivia Staniaszek 2022", 120, height-20);
@@ -216,12 +241,23 @@ void menuPage(){
   }
 }
 
+void scoreboard(){
+  background(bkg);
+  textFont(tFont);
+  textSize(60);
+  fill(255);
+  text("Scoreboard", width/2, height*0.10);
+  String[] scores = new int[]parseFile();
+}
 
 void drawGuesses(){
   fill(255,255,255);
   noStroke();
   int cwidth = 70;
-  int gap = 75;
+  //float ygap = 75 + noOfGuesses*2.5;
+  float ygap = height/noOfGuesses;
+  //ygap = map(ygap, 0, 900, 0, height);
+  int xgap = 75;
   for(int i=0; i<4; i++){
     for(int j=0; j<noOfGuesses; j++){
       switch(guessesAr[i][j]){
@@ -247,7 +283,12 @@ void drawGuesses(){
           fill(pin6);
           break;
       }
-      circle(gap*i+gap,gap*j+gap,cwidth);
+      
+      circle(xgap*i+xgap,ygap*j+ygap/2,cwidth);
+      fill(255);
+      if(guessesAr[i][j] != 0){
+        text(guessesAr[i][j],xgap*i+xgap,ygap*j+ygap/2);
+      }
     }
   }
 }
@@ -258,30 +299,30 @@ void getFeedbackColour(int i, int j){
           fill(blankpin);
           break;
         case 1:
-          fill(150);
+          fill(partially);
           break;
         case 2:
-          fill(20);
+          fill(correct);
           break;
   }
 }
 
 void drawFeedback(){
   int feedbackx = 360;
-  float feedbacky = 60;
+  float feedbacky = 133- 15; //60 + noOfGuesses*2.5;
   int cwidth = 30;
-  int gap = 30;
-  int rowgap = 75;
+  float gap = 30;
+  float rowgap = height/noOfGuesses;
   int cluster = 0;
-  for(int i=0; i<12; i++){
+  for(int i=0; i<noOfGuesses; i++){
     getFeedbackColour(0,i);
-    circle(feedbackx, feedbacky+cluster*rowgap,cwidth);
+    circle(feedbackx, feedbacky/2+cluster*rowgap,cwidth);
     getFeedbackColour(1,i);
-    circle(feedbackx+gap, feedbacky+cluster*rowgap, cwidth);
+    circle(feedbackx+gap, feedbacky/2+cluster*rowgap, cwidth);
     getFeedbackColour(2,i);
-    circle(feedbackx, feedbacky+cluster*rowgap+gap,cwidth); 
+    circle(feedbackx, feedbacky/2+cluster*rowgap+gap,cwidth); 
     getFeedbackColour(3,i);
-    circle(feedbackx +gap, feedbacky+cluster*rowgap+gap,cwidth);
+    circle(feedbackx +gap, feedbacky/2+cluster*rowgap+gap,cwidth);
     cluster++;
   }
 }
