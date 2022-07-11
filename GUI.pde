@@ -1,6 +1,6 @@
 color bkg = color(0,0,0);
 
-color blankpin = color(204, 204, 204);
+color blankpin = color(225);
 
 color pin1 = color(239, 71, 111);
 color pin2 = color(247, 140, 107);
